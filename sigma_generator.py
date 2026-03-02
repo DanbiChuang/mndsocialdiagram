@@ -15,7 +15,7 @@ from tavily import TavilyClient
 # --- 1. 核心配置 (從環境變數讀取) ---
 TAVILY_API_KEY = os.environ.get("TAVILY_API_KEY", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-MODEL_NAME = "gemini-3-pro-preview"
+MODEL_NAME = "gemini-1.5-flash"
 
 genai.configure(api_key=GEMINI_API_KEY)
 tavily = TavilyClient(api_key=TAVILY_API_KEY)
