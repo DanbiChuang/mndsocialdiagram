@@ -20,6 +20,8 @@ app.add_middleware(
 class GenerateRequest(BaseModel):
     topic: str
     node_count: int = 2000
+    gemini_api_key: str = None
+    tavily_api_key: str = None
 
 
 @app.post("/api/generate-social-graph")
@@ -31,7 +33,12 @@ async def generate(request: GenerateRequest):
     node_count = max(100, min(request.node_count, 5000))
 
     try:
-        result = generate_social_graph(request.topic, node_count)
+        result = generate_social_graph(
+            request.topic, 
+            request.node_count,
+            gemini_api_key=request.gemini_api_key,
+            tavily_api_key=request.tavily_api_key
+        )
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

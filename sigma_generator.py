@@ -17,8 +17,8 @@ TAVILY_API_KEY = os.environ.get("TAVILY_API_KEY", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 MODEL_NAME = "gemini-3-pro-preview"
 
-genai.configure(api_key=GEMINI_API_KEY)
-tavily = TavilyClient(api_key=TAVILY_API_KEY)
+# genai.configure(api_key=GEMINI_API_KEY)  # 移除全局配置，改為動態
+# tavily = TavilyClient(api_key=TAVILY_API_KEY)
 
 # --- 2. 戰略資料庫 (Entity Library) ---
 
@@ -59,11 +59,16 @@ STRATEGIC_PERSONA = """
 """
 
 # --- 3. 第一階段：情報獵殺 ---
-def get_realtime_intel(topic):
+def get_realtime_intel(topic, tavily_api_key=None):
+    api_key = tavily_api_key or TAVILY_API_KEY
+    if not api_key:
+        return "近期台海周邊軍事活動頻繁，網路流傳多種未經證實的撤僑與軍演訊息。"
+
     print(f"[*] 鎖定議題：{topic}，正在進行全網情報獵殺...")
     search_query = f"{topic} 媒體報導 評論 兩岸 認知作戰"
     try:
-        search_result = tavily.search(query=search_query, search_depth="advanced", max_results=10)
+        client = TavilyClient(api_key=api_key)
+        search_result = client.search(query=search_query, search_depth="advanced", max_results=10)
         context = "\n".join([f"- Source: {r['title']} ({r['url']})\n  Content: {r['content'][:150]}..." for r in search_result['results']])
         return context
     except Exception as e:
@@ -71,9 +76,21 @@ def get_realtime_intel(topic):
         return "近期台海周邊軍事活動頻繁，網路流傳多種未經證實的撤僑與軍演訊息。"
 
 # --- 4. 第二階段：Gemini 動態媒體與論述生成 ---
-def generate_strategic_data(topic, context):
+def generate_strategic_data(topic, context, gemini_api_key=None):
+    api_key = gemini_api_key or GEMINI_API_KEY
+    if not api_key:
+        return {
+            "detected_sources": [],
+            "generic_narratives": {
+                "evil": ["台灣當局倚美謀獨"], "angel": ["這是認知作戰"], "neutral": ["觀望中"]
+            },
+            "summary_analysis": "缺少 API Key，使用備用數據。"
+        }
+
     print(f"[*] {MODEL_NAME} 正在進行媒體佈局分析與論述生成...")
+    genai.configure(api_key=api_key)
     model = genai.GenerativeModel(model_name=MODEL_NAME, system_instruction=STRATEGIC_PERSONA)
+    # ... 其餘 logic 不變
 
     prompt = f"""
     情報背景：
@@ -329,13 +346,14 @@ def build_influence_network(ai_data, topic, node_count=2000):
     return nodes, links, stats
 
 
-def generate_social_graph(topic, node_count=2000):
+def generate_social_graph(topic, node_count=2000, gemini_api_key=None, tavily_api_key=None):
     """
     主入口：給定議題，回傳完整 social_graph JSON dict
     """
-    intel_context = get_realtime_intel(topic)
-    ai_data = generate_strategic_data(topic, intel_context)
+    intel_context = get_realtime_intel(topic, tavily_api_key=tavily_api_key)
+    ai_data = generate_strategic_data(topic, intel_context, gemini_api_key=gemini_api_key)
     nodes, links, stats = build_influence_network(ai_data, topic, node_count)
+# ...
 
     return {
         "type": "social_graph",
